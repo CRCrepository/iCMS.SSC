@@ -1,1 +1,1 @@
-# iCMS single-sample classifier (SSP)
+# iCMS single-sample classifier (SSC)

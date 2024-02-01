@@ -1,1 +1,1 @@
-# iCMSbulk
+# iCMS single-sample classifier (SSP)

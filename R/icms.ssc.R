@@ -10,7 +10,7 @@
 #' @return iCMS classification
 #' @export
 #'
-iCMS.SSC <- function(ivect, min.cor=0.1, min.dist=0.05, q=0.9,
+iCMS.DQ <- function(ivect, min.cor=0.1, min.dist=0.05, q=0.9,
                      metric="kendall", allgenes=FALSE, min.genes=30, jobs=4) {
 
   message("input matrix : ",  ncol(ivect), " samples with ", nrow(ivect),". Use Single-Sample Predictor with ",metric," method")

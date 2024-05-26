@@ -1,4 +1,4 @@
-ntp.matrix <- function(imat, tmat, metric="kendall", bs.iter=100, jobs=8){
+ntp.matrix <- function(imat, tmat, metric="kendall", bs.iter=100, jobs=4){
 
   if (jobs>detectCores()) { jobs <- detectCores() }
   cg <- intersect(rownames(tmat), rownames(imat))
@@ -20,8 +20,8 @@ ntp.matrix <- function(imat, tmat, metric="kendall", bs.iter=100, jobs=8){
     sum(bootstrap.sim[,which.max(simrow)]>max(simrow))/bs.iter
   }
 
-  tmp <- unlist(mclapply(rownames(isim),
-                         function(x) bootstrap.vector(imat[,x], tmat, isim[x,], metric, bs.iter)))
+  tmp <- unlist(parallel::mclapply(rownames(isim),
+                         function(x) bootstrap.vector(imat[,x], tmat, isim[x,], metric, bs.iter), mc.cores = jobs))
   isim <- data.frame(isim)
   isim$nearest.icms <- apply(isim, 1, function(x) colnames(isim)[which.max(x)])
   isim$p.value <- tmp

@@ -13,7 +13,7 @@
 iCMS.DQ <- function(ivect, min.cor=0.1, min.dist=0.05, q=0.9,
                      metric="kendall", allgenes=FALSE, min.genes=30, jobs=4) {
 
-  message("input matrix : ",  ncol(ivect), " samples with ", nrow(ivect),". Use Single-Sample Predictor with ",metric," method")
+  message("input matrix : ",  ncol(ivect), " samples with ", nrow(ivect) ," genes. Use Single-Sample Predictor with ",metric," method")
 
   ## q is the quantile that is used to judge distance
   ## q=1 means use the max, ie the most similar centroid
@@ -33,12 +33,11 @@ iCMS.DQ <- function(ivect, min.cor=0.1, min.dist=0.05, q=0.9,
                                                     min.genes)) }
 
   if (jobs<=1) {
-    retl <- apply(ivect, 2, dq.vect, min.cor, min.dist, q,
-                  metric, allgenes, min.genes)
+    retl <- apply(ivect, 2, dq.vect(ivect, min.cor, min.dist, q, metric, allgenes, min.genes))
   } else {
     if (jobs>detectCores()) { jobs <- detectCores() }
-    retl <- mclapply(1:ncol(ivect), function(z) dq.vect(ivect[,z], min.cor, min.dist, q,
-                                                         metric, allgenes, min.genes))
+    retl <- parallel::mclapply(1:ncol(ivect), function(z) dq.vect(ivect[,z], min.cor, min.dist, q,
+                                                         metric, allgenes, min.genes), mc.cores = jobs)
   }
 
   return(do.call(rbind, retl))
@@ -72,7 +71,7 @@ iCMS.KNN <- function(ivect, nn=10,  metric="kendall", allgenes=FALSE, min.genes=
     retl <- apply(ivect, 2, knn.vect, min.cor, min.dist, q,metric, allgenes, min.genes, verbose)
   } else {
     if (jobs>detectCores()) { jobs <- detectCores() }
-    retl <- mclapply(1:ncol(ivect), function(z) knn.vect(ivect[,z], nn, metric, allgenes, min.genes, verbose))
+    retl <- parallel::mclapply(1:ncol(ivect), function(z) knn.vect(ivect[,z], nn, metric, allgenes, min.genes, verbose), mc.cores = jobs)
   }
 
   return(do.call(rbind, retl))

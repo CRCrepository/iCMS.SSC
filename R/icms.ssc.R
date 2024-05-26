@@ -1,16 +1,19 @@
-#' calculate iCMS on bulk data (microarray / RNA-seq)
+#' calculate iCMS on bulk data (microarray / RNA-seq) using single-sample predictor
 #' @param ivect input matrix to calculate. The row will be the gene symbol, and column will be sample name
 #' @param min.cor the minimum correlation threshold to determine the confidence (default = 0.1)
 #' @param min.dist the minimum distance to determine the iCMS call (default = 0.05)
-#' @param q The quantile that is used to judge distance
-#' @param matric The method to calculate correlation matrix (default = kendall)
-#' @param allgenes description
+#' @param q The quantile that is used to judge distance (default = 0.9). q=0.9-1 appears better for non batch and corrected data while q=0.6-0.7 appears better for batch-corrected
+#' @param matric The method to calculate correlation matrix (default = kendall). Kendall correlation (non parametric) seems more robust but is slow. Pearson is faster, and often good enough.
+#' @param allgenes  whether to use the extended genes or not, basically only epithelial genes are used (default = FALSE)
 #' @param min.genes Minimum number of genes that can calculate iCMS call (default = 30 genes)
-#' @param jobs
+#' @param jobs If parallel execution fails you can try jobs=1 which will use serial apply (default = 4)
 #' @return iCMS classification
 #' @export
-iCMS.SSC <- function(ivect, min.cor=0.1, min.dist=0.05, q=0.9,
-                     metric="kendall", allgenes=FALSE, min.genes=30, jobs=8) {
+#'
+iCMS.DQ <- function(ivect, min.cor=0.1, min.dist=0.05, q=0.9,
+                     metric="kendall", allgenes=FALSE, min.genes=30, jobs=4) {
+
+  message("input matrix : ",  ncol(ivect), " samples with ", nrow(ivect),". Use Single-Sample Predictor with ",metric," method")
 
   ## q is the quantile that is used to judge distance
   ## q=1 means use the max, ie the most similar centroid
@@ -25,76 +28,68 @@ iCMS.SSC <- function(ivect, min.cor=0.1, min.dist=0.05, q=0.9,
     metric <- "kendall"
   }
 
-  if (class(ivect)[1]=="numeric") { return(ssp.vect(ivect, min.cor, min.dist,
+  if (class(ivect)[1]=="numeric") { return(dq.vect(ivect, min.cor, min.dist,
                                                     q, metric, allgenes,
                                                     min.genes)) }
 
   if (jobs<=1) {
-    retl <- apply(ivect, 2, ssp.vect, min.cor, min.dist, q,
+    retl <- apply(ivect, 2, dq.vect, min.cor, min.dist, q,
                   metric, allgenes, min.genes)
   } else {
     if (jobs>detectCores()) { jobs <- detectCores() }
-    retl <- mclapply(1:ncol(ivect), function(z) ssp.vect(ivect[,z], min.cor, min.dist, q,
+    retl <- mclapply(1:ncol(ivect), function(z) dq.vect(ivect[,z], min.cor, min.dist, q,
                                                          metric, allgenes, min.genes))
   }
 
-  do.call(rbind, retl)
+  return(do.call(rbind, retl))
 }
 
 
+#' calculate iCMS on bulk data (microarray / RNA-seq) using k-nearest neighbors algorithm
+#' @param ivect input matrix to calculate. The row will be the gene symbol, and column will be sample name
+#' @param nn the minimum correlation threshold to determine the confidence (default = 0.1)
+#' @param matric The method to calculate correlation matrix (default = kendall). Kendall correlation (non parametric) seems more robust but is slow. Pearson is faster, and often good enough.
+#' @param allgenes  whether to use the extended genes or not, basically only epithelial genes are used (default = FALSE)
+#' @param min.genes Minimum number of genes that can calculate iCMS call (default = 30 genes)
+#' @param jobs If parallel execution fails you can try jobs=1 which will use serial apply (default = 4)
+#' @return iCMS classification
+#' @export
+#'
+iCMS.KNN <- function(ivect, nn=10,  metric="kendall", allgenes=FALSE, min.genes=30, jobs=4, verbose = FALSE) {
 
+  message("input matrix : ",  ncol(ivect), " samples with ", nrow(ivect),". Use K-Nearest Neighbors algorithm with ",metric," method")
 
-ssp.vect <- function(v, min.cor, min.dist, q, metric=metric, allgenes, min.genes)
-{
-  if (allgenes) {
-    prot <- ssproto.ext } else { prot <- ssproto }
-  cg <- intersect(rownames(prot), names(na.omit(v)))
-  if (length(cg)<min.genes) { warning("Too few common genes. Unable to map prototype") ; return(NA) }
+  valid.metrics <- c("pearson", "kendall", "spearman", "cosine")
+  if (!metric %in% valid.metrics) {
+    warning(paste0("Only understand metrics: ", valid.metrics))
+    warning("Using Kendall correlation, by default")
+    metric <- "kendall"
+  }
 
-  if (metric!="cosine"){
-    smat <- cor(as.matrix(v)[cg,], prot[cg,], method=metric)
-    colnames(smat) <- colnames(prot)
+  if (class(ivect)[1]=="numeric") { return(knn.vect(ivect, nn,  metric, allgenes,  min.genes, verbose)) }
+
+  if (jobs<=1) {
+    retl <- apply(ivect, 2, knn.vect, min.cor, min.dist, q,metric, allgenes, min.genes, verbose)
   } else {
-    if (metric=="cosine") {
-      smat <- cosine.sim(as.matrix(v)[cg,], prot[cg,])
-      colnames(smat) <- colnames(prot)
-    }
+    if (jobs>detectCores()) { jobs <- detectCores() }
+    retl <- mclapply(1:ncol(ivect), function(z) knn.vect(ivect[,z], nn, metric, allgenes, min.genes, verbose))
   }
 
-  maxdist <- t(apply(smat, 1, function(x) tapply(x, ssicms.index, quantile, q, na.rm=TRUE)))
-  ## less robust?
-  ## maxdist <- t(apply(smat, 1, function(x) tapply(x, ssicms, max, na.rm=TRUE)))
-  probcms <- cbind(data.frame(smat),maxdist)
-  probcms$i2i3 <- probcms$i2-probcms$i3
-
-  cfun <- function(x) {
-    if (all(is.na(x))) { return(NA) }
-    ## negative correlation with both prototypes
-    if (max(x, na.rm=TRUE)<0) { return(NA) }
-    ## cor must be > min.cor OR
-    ## abs difference in cor betwen i2.i3
-    ## must be > min.cor to call confidently
-    if (max(x,na.rm=TRUE)<min.cor &
-        (abs(x["i2"]-x["i3"])<min.cor))
-    { return(NA) }
-    ## dist from diag
-    dd <- sqrt(2*(x["i2"]-x["i3"])^2)
-    if (dd<min.dist) { return(NA) }
-    colnames(maxdist)[which.max(x)]
-  }
-
-  probcms$nearest.icms <- apply(maxdist, 1, function(x) { if (all(is.na(x))) { return(NA) } ; colnames(maxdist)[which.max(x)] } )
-  probcms$confident.icms <- apply(maxdist,1,cfun)
-  probcms$nearest.dset <- apply(smat, 1, function(x) { if (all(is.na(x))) { return(NA) } ; colnames(smat)[which.max(x)] } )
-  probcms$nearest.dset <- gsub("-s[0-9]+$","",probcms$nearest.dset)
-  probcms$nearest.dset <- gsub("i[0-9]+[.]","",probcms$nearest.dset)
-  probcms$ngenes <- length(cg)
-  probcms
+  return(do.call(rbind, retl))
 }
 
-
-cosine.sim <- function(x, y) {
-  a <- crossprod(x,y)
-  b <- outer(sqrt(apply(x,2,crossprod)), sqrt(apply(y,2,crossprod)))
-  a/b
+#' calculate iCMS on bulk data (microarray / RNA-seq) using k-nearest neighbors algorithm
+#' @param ivect input matrix to calculate. The row will be the gene symbol, and column will be sample name
+#' @param matric The method to calculate correlation matrix (default = kendall). Kendall correlation (non parametric) seems more robust but is slow. Pearson is faster, and often good enough.
+#' @param bs.iter the number of iteration to calculate P-value
+#' @param allgenes  whether to use the extended genes or not, basically only epithelial genes are used (default = FALSE)
+#' @param min.genes Minimum number of genes that can calculate iCMS call (default = 30 genes)
+#' @param jobs If parallel execution fails you can try jobs=1 which will use serial apply (default = 4)
+#' @return iCMS classification
+#' @export
+#'
+iCMS.NTP <- function(ivect, metric="kendall", bs.iter=100, jobs=8)
+{
+  return(ntp.matrix(imat, tmat, metric, bs.iter, jobs))
 }
+

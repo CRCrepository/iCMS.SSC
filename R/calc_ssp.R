@@ -13,7 +13,7 @@ dq.vect <- function(v, min.cor, min.dist, q,  metric, allgenes, min.genes){
   if (allgenes) {
     prot <- ssproto.ext } else { prot <- ssproto }
   cg <- intersect(rownames(prot), names(na.omit(v)))
-  if (length(cg)<min.genes) { warning("Too few common genes. Unable to map prototype") ; return(NA) }
+  if (length(cg)<min.genes) { print(length(cg));warning("Too few common genes. Unable to map prototype") ; return(NA) }
 
   if (metric!="cosine"){
     smat <- cor(as.matrix(v)[cg,], prot[cg,], method=metric)
@@ -30,9 +30,8 @@ dq.vect <- function(v, min.cor, min.dist, q,  metric, allgenes, min.genes){
     }
   }
 
-  maxdist <- t(apply(smat, 1, function(x) tapply(x, ssicms, quantile, q, na.rm=TRUE)))
+  maxdist <- t(apply(smat, 1, function(x) tapply(x, ssicms.index, quantile, q, na.rm=TRUE)))
   ## less robust?
-  ## maxdist <- t(apply(smat, 1, function(x) tapply(x, ssicms, max, na.rm=TRUE)))
   probcms <- cbind(data.frame(smat),maxdist)
   probcms$i2i3 <- probcms$i2-probcms$i3
 

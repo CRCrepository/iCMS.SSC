@@ -39,7 +39,7 @@ knn.vect <- function(v, nn, metric, allgenes, min.genes, mcenter=FALSE, verbose=
   }
 
   ord <- order(smat, decreasing=TRUE)[1:nn]
-  knn <- ssicms[ord]
+  knn <- ssicms.index[ord]
   knnd <- as.vector(smat[ord])
   names(knnd) <- colnames(smat)[ord]
   knndset <- gsub("^i[23][.]|-s[0-9]+$","",colnames(smat)[ord])

@@ -33,7 +33,7 @@ iCMS.DQ <- function(ivect, min.cor=0.1, min.dist=0.05, q=0.9,
                                                     min.genes)) }
 
   if (jobs<=1) {
-    retl <- apply(ivect, 2, dq.vect(ivect, min.cor, min.dist, q, metric, allgenes, min.genes))
+    retl <- apply(ivect, 2, function(z) dq.vect(z, min.cor, min.dist, q, metric, allgenes, min.genes))
   } else {
     if (jobs>detectCores()) { jobs <- detectCores() }
     retl <- parallel::mclapply(1:ncol(ivect), function(z) dq.vect(ivect[,z], min.cor, min.dist, q,

@@ -1,14 +1,14 @@
-ntp.matrix <- function(imat, tmat, metric="kendall", bs.iter=100, jobs=4){
+ntp.matrix <- function(ivect, tmat, metric="kendall", bs.iter=100, jobs=4){
 
   if (jobs>detectCores()) { jobs <- detectCores() }
-  cg <- intersect(rownames(tmat), rownames(imat))
+  cg <- intersect(rownames(tmat), rownames(ivect))
   tmat <- tmat[cg,]
 
-  isim <- apply(imat[cg,],2,function(x) vector.similarity(x,tmat, metric))
+  isim <- apply(ivect[cg,],2,function(x) vector.similarity(x,tmat, metric))
   isim <- t(isim)
   colnames(isim) <- c("i2","i3")
 
-  ## bootstrap estimate of distance for random genes
+  ## bootstrap estivecte of distance for random genes
   bootstrap.vector <- function(v, tmat, simrow, metric=metric, bs.iter) {
     gc()
     rmat <- do.call(cbind,lapply(1:bs.iter, function(x) {
@@ -21,7 +21,7 @@ ntp.matrix <- function(imat, tmat, metric="kendall", bs.iter=100, jobs=4){
   }
 
   tmp <- unlist(parallel::mclapply(rownames(isim),
-                         function(x) bootstrap.vector(imat[,x], tmat, isim[x,], metric, bs.iter), mc.cores = jobs))
+                         function(x) bootstrap.vector(ivect[,x], tmat, isim[x,], metric, bs.iter), mc.cores = jobs))
   isim <- data.frame(isim)
   isim$nearest.icms <- apply(isim, 1, function(x) colnames(isim)[which.max(x)])
   isim$p.value <- tmp

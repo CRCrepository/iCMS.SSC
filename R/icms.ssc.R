@@ -87,8 +87,7 @@ iCMS.KNN <- function(ivect, nn=10,  metric="kendall", allgenes=FALSE, min.genes=
 #' @return iCMS classification
 #' @export
 #'
-iCMS.NTP <- function(ivect, metric="kendall", bs.iter=100, jobs=8)
-{
+iCMS.NTP <- function(ivect, metric="kendall", bs.iter=100, jobs=8){
   return(ntp.matrix(ivect, tmat, metric, bs.iter, jobs))
 }
 

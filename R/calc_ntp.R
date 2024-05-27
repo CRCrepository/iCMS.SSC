@@ -1,6 +1,6 @@
 ntp.matrix <- function(ivect, tmat, metric="kendall", bs.iter=100, jobs=4){
 
-  if (jobs>detectCores()) { jobs <- detectCores() }
+  if (jobs>parallel::detectCores()) { jobs <- parallel::detectCores() }
   cg <- intersect(rownames(tmat), rownames(ivect))
   tmat <- tmat[cg,]
 

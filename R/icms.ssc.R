@@ -68,7 +68,7 @@ iCMS.KNN <- function(ivect, nn=10,  metric="kendall", allgenes=FALSE, min.genes=
   if (class(ivect)[1]=="numeric") { return(knn.vect(ivect, nn,  metric, allgenes,  min.genes, verbose)) }
 
   if (jobs<=1) {
-    retl <- apply(ivect, 2, knn.vect, min.cor, min.dist, q,metric, allgenes, min.genes, verbose)
+    retl <- apply(ivect, 2, function(z) knn.vect(z, min.cor, min.dist, q,metric, allgenes, min.genes, verbose))
   } else {
     if (jobs>parallel::detectCores()) { jobs <- parallel::detectCores() }
     retl <- parallel::mclapply(1:ncol(ivect), function(z) knn.vect(ivect[,z], nn, metric, allgenes, min.genes, verbose), mc.cores = jobs)

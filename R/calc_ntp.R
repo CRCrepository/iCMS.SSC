@@ -23,8 +23,11 @@ ntp.matrix <- function(ivect, tmat, metric="kendall", bs.iter=100, jobs=4){
     sum(bootstrap.sim[,which.max(simrow)]>max(simrow))/bs.iter
   }
 
-  tmp <- unlist(parallel::mclapply(rownames(isim),
-                         function(x) bootstrap.vector(ivect[,x], tmat, isim[x,], metric, bs.iter), mc.cores = jobs))
+  if(jobs > 1){tmp <- unlist(parallel::mclapply(rownames(isim),
+                                                function(x) bootstrap.vector(ivect[,x], tmat, isim[x,], metric, bs.iter), mc.cores = jobs))
+  }else{
+    tmp <- apply(rownames(isim),2,function(x) bootstrap.vector(ivect[,x], tmat, isim[x,], metric, bs.iter))
+  }
   isim <- data.frame(isim)
   isim$nearest.icms <- apply(isim, 1, function(x) colnames(isim)[which.max(x)])
   isim$p.value <- tmp

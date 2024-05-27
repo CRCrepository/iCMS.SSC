@@ -1,3 +1,6 @@
+#' applying NTP algorithm
+#' @export
+#'
 ntp.matrix <- function(ivect, tmat, metric="kendall", bs.iter=100, jobs=4){
 
   if (jobs>parallel::detectCores()) { jobs <- parallel::detectCores() }
@@ -33,3 +36,38 @@ ntp.matrix <- function(ivect, tmat, metric="kendall", bs.iter=100, jobs=4){
 
   return(isim)
 }
+
+
+#' calculate vector similarity #
+#' @export
+#'
+vector.similarity <- function(v, tmat, metric)
+{
+  if (metric=="correlation") { metric  <- "pearson" }
+  if (length(v)!=nrow(tmat)) {
+    warning("Must have same number of genes")
+    return(NaN)
+  }
+
+  cosine.sim <- function(x, y) {
+    a <- crossprod(x,y)
+    b <- outer(sqrt(apply(as.matrix(x),2,crossprod)), sqrt(apply(y,2,crossprod)))
+    a/b
+  }
+
+  tmat <- tmat[!is.na(v),]
+  v <- v[!is.na(v)]
+
+  if (metric %in% c("pearson","kendall","spearman")) {
+    smat <- cor(v, tmat, method=metric)
+    colnames(smat) <- colnames(tmat)
+  } else {
+    if (metric=="cosine") {
+      smat <- cosine.sim(v, tmat)
+      colnames(smat) <- colnames(tmat)
+    }
+  }
+
+  return(smat)
+}
+

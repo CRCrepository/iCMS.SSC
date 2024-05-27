@@ -23,10 +23,9 @@ ntp.matrix <- function(ivect, tmat, metric="kendall", bs.iter=100, jobs=4){
     sum(bootstrap.sim[,which.max(simrow)]>max(simrow))/bs.iter
   }
 
-  if(jobs > 1){tmp <- unlist(parallel::mclapply(rownames(isim),
-                                                function(x) bootstrap.vector(ivect[,x], tmat, isim[x,], metric, bs.iter), mc.cores = jobs))
+  if(jobs > 1){tmp <- unlist(parallel::mclapply(rownames(isim), function(x) bootstrap.vector(ivect[,x], tmat, isim[x,], metric, bs.iter), mc.cores = jobs))
   }else{
-    tmp <- apply(rownames(isim),2,function(x) bootstrap.vector(ivect[,x], tmat, isim[x,], metric, bs.iter))
+    tmp <- as.numeric( sapply(rownames(isim),function(x) bootstrap.vector(ivect[,x], tmat, isim[x,], metric, bs.iter)))
   }
   isim <- data.frame(isim)
   isim$nearest.icms <- apply(isim, 1, function(x) colnames(isim)[which.max(x)])
@@ -67,6 +66,36 @@ vector.similarity <- function(v, tmat, metric)
   } else {
     if (metric=="cosine") {
       smat <- cosine.sim(v, tmat)
+      colnames(smat) <- colnames(tmat)
+    }
+  }
+
+  return(smat)
+}
+
+
+#' calculate matrix similarity
+#' @export
+matrix.similarity <- function(rmat, tmat, metric="kendall")
+{
+  if (metric=="correlation") { metric  <- "pearson" }
+  if (nrow(rmat)!=nrow(tmat)) {
+    warning("Must have same number of genes")
+    return(NaN)
+  }
+
+  cosine.sim <- function(x, y) {
+    a <- crossprod(x,y)
+    b <- outer(sqrt(apply((x),2,crossprod)), sqrt(apply(y,2,crossprod)))
+    a/b
+  }
+
+  if (metric %in% c("pearson","kendall","spearman")){
+    smat <- cor(rmat, tmat, method=metric)
+    colnames(smat) <- colnames(tmat)
+  } else {
+    if (metric=="cosine") {
+      smat <- cosine.sim(rmat, tmat)
       colnames(smat) <- colnames(tmat)
     }
   }

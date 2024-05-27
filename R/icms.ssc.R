@@ -35,7 +35,7 @@ iCMS.DQ <- function(ivect, min.cor=0.1, min.dist=0.05, q=0.9,
   if (jobs<=1) {
     retl <- apply(ivect, 2, function(z) dq.vect(z, min.cor, min.dist, q, metric, allgenes, min.genes))
   } else {
-    if (jobs>detectCores()) { jobs <- detectCores() }
+    if (jobs>parallel::detectCores()) { jobs <- parallel::detectCores() }
     retl <- parallel::mclapply(1:ncol(ivect), function(z) dq.vect(ivect[,z], min.cor, min.dist, q,
                                                          metric, allgenes, min.genes), mc.cores = jobs)
   }
@@ -70,7 +70,7 @@ iCMS.KNN <- function(ivect, nn=10,  metric="kendall", allgenes=FALSE, min.genes=
   if (jobs<=1) {
     retl <- apply(ivect, 2, knn.vect, min.cor, min.dist, q,metric, allgenes, min.genes, verbose)
   } else {
-    if (jobs>detectCores()) { jobs <- detectCores() }
+    if (jobs>parallel::detectCores()) { jobs <- parallel::detectCores() }
     retl <- parallel::mclapply(1:ncol(ivect), function(z) knn.vect(ivect[,z], nn, metric, allgenes, min.genes, verbose), mc.cores = jobs)
   }
 

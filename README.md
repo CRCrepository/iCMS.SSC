@@ -39,10 +39,8 @@ Note that the output data frames also contain variables that are specific to eac
 
 
 ```{r}
-
 icms_results.dq$nearest.icms ## the most probable iCMS class, including low confidence
 icms_results.dq$confident.icms ## high-confidence iCMS class
-
 ``` 
 
 For more details please see the individual documentation of each function in R. 

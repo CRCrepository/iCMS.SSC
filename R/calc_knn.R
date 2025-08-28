@@ -28,10 +28,14 @@ knn.vect <- function(v, nn, metric, allgenes, min.genes, mcenter=FALSE, verbose=
     colnames(smat) <- colnames(prot)
   } else {
     if (metric=="cosine") {
-      cosine.sim <- function(x, y) {
-        a <- crossprod(x,y)
-        b <- outer(sqrt(apply(x,2,crossprod)), sqrt(apply(y,2,crossprod)))
-        a/b
+        cosine.sim <- function(x, y) {
+            a <- crossprod(x,y)
+            nx <- norm(x, type="2")
+            ny <- apply(y, 2, norm, type="2")
+            a/(nx*ny)
+##            a <- crossprod(x,y)
+##            b <- outer(sqrt(apply(x,2,crossprod)), sqrt(apply(y,2,crossprod)))
+##            a/b
       }
       smat <- cosine.sim(as.matrix(v)[cg,], prot[cg,])
       colnames(smat) <- colnames(prot)

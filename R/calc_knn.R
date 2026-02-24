@@ -1,23 +1,34 @@
 #' Classify a single sample using the K-Nearest Neighbours (KNN) method
 #'
-#' @param v Named numeric vector of (log-transformed) gene expression values.
+#' @param v Named numeric vector of (log-transformed) gene expression
+#'     values.
 #' @param nn Number of nearest neighbours (default 10).
-#' @param metric Similarity metric: "pearson", "kendall" (default), "spearman", or "cosine".
-#' @param allgenes Use extended gene set (default FALSE; uses epithelial genes only).
-#' @param min.genes Minimum gene overlap with the prototype set (default 30).
-#' @param mcenter Mean-centre the sample before computing similarity. Only relevant for
-#'   cosine similarity (correlation metrics are shift-invariant). Default FALSE.
-#' @param stratify.ds If TRUE, vote is stratified by training dataset: for each dataset the
-#'   class whose best prototype is most similar wins one vote, then votes are tallied across
-#'   datasets. This prevents a single batch-matched dataset from dominating the top-nn
-#'   neighbours. Default FALSE.
-#' @param weighted.genes If TRUE, restrict computation to the top 100 most discriminative
-#'   genes (by absolute t-statistic); for "pearson" and "cosine" uses weighted correlation /
-#'   weighted cosine instead. Default FALSE.
-#' @param verbose If TRUE, return individual neighbour labels, similarities, and dataset
-#'   labels as additional columns. Default FALSE.
-#' @return A one-row data frame with columns: qi2, qi3, i2, i3, i2i3, nearest.icms,
-#'   confident.icms, nearest.ds, ngenes (plus neighbour details when verbose = TRUE).
+#' @param metric Similarity metric: "pearson", "kendall" (default),
+#'     "spearman", or "cosine".
+#' @param allgenes Use extended gene set (default FALSE; uses
+#'     epithelial genes only).
+#' @param min.genes Minimum gene overlap with the prototype set
+#'     (default 30).
+#' @param mcenter Mean-centre the sample before computing
+#'     similarity. Only relevant for cosine similarity (correlation
+#'     metrics are shift-invariant). Default FALSE.
+#' @param stratify.ds If TRUE, vote is stratified by training dataset:
+#'     for each dataset the class whose best prototype is most similar
+#'     wins one vote, then votes are tallied across datasets. This
+#'     prevents a single batch-matched dataset from dominating the
+#'     top-nn neighbours. You may consider this if the input data have
+#'     strong batch effects. Default FALSE.
+#' @param weighted.genes If TRUE, restrict computation to the top 100
+#'     most discriminative genes (by absolute t-statistic); for
+#'     "pearson" and "cosine" uses weighted correlation / weighted
+#'     cosine instead. Not useful if you are using the recommended
+#'     "kendall" distance metric. Default FALSE.
+#' @param verbose If TRUE, return individual neighbour labels,
+#'     similarities, and dataset labels as additional columns. Default
+#'     FALSE.
+#' @return A one-row data frame with columns: qi2, qi3, i2, i3, i2i3,
+#'     nearest.icms, confident.icms, nearest.ds, ngenes (plus
+#'     neighbour details when verbose = TRUE).
 #' @export
 knn.vect <- function(v, nn, metric, allgenes, min.genes,
                      mcenter = FALSE, stratify.ds = FALSE,
@@ -65,7 +76,7 @@ knn.vect <- function(v, nn, metric, allgenes, min.genes,
   ## Dataset labels for each prototype column
   ds_all <- sub("^i[23][.]", "", sub("-s[0-9]+$", "", colnames(prot)))
 
-  ## ===== Dataset-stratified voting ====================================
+  ## Stratify voting by dataset
   if (stratify.ds) {
     unique_ds  <- unique(ds_all)
     ds_votes   <- vapply(unique_ds, function(d) {
@@ -118,7 +129,7 @@ knn.vect <- function(v, nn, metric, allgenes, min.genes,
     return(data.frame(retl, stringsAsFactors = FALSE))
   }
 
-  ## ===== Standard global KNN ==========================================
+  ## Without dataset stratification (default)
   ord     <- order(smat, decreasing = TRUE)[1:nn]
   knn_cls <- ssicms.index[ord]
   knnd    <- as.vector(smat[ord])

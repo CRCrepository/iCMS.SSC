@@ -99,13 +99,13 @@ dq.vect <- function(v, min.cor, min.dist, q, metric, allgenes, min.genes,
     }
   }
 
-  ## --- Dataset labels ------------------------------------------------
+## Generate dataset labels once per call
   ds_all <- sub("^i[23][.]", "", sub("-s[0-9]+$", "", colnames(prot)))
 
-  ## --- Per-class quantile summaries ----------------------------------
+## Per-class quantile summaries
   if (stratify.ds) {
-    ## Compute quantile margin separately for each training dataset,
-    ## then aggregate — removes dataset-level similarity lift.
+## Compute quantile margin separately for each training dataset,
+## then aggregate — removes dataset-level similarity lift.
     unique_ds <- unique(ds_all)
     margins <- vapply(unique_ds, function(d) {
       sims_d <- as.vector(smat)[ds_all == d]
@@ -161,8 +161,7 @@ dq.vect <- function(v, min.cor, min.dist, q, metric, allgenes, min.genes,
     nearest.dset <- ds_all[which.max(as.vector(smat))]
   }
 
-  ## --- Build output ---------------------------------------------------
-  summary_cols <- data.frame(
+    summary_cols <- data.frame(
     i2             = qi2,
     i3             = qi3,
     i2i3           = i2i3,
@@ -170,9 +169,9 @@ dq.vect <- function(v, min.cor, min.dist, q, metric, allgenes, min.genes,
     confident.icms = confident.icms,
     nearest.dset   = nearest.dset,
     ngenes         = length(cg),
-    stringsAsFactors = FALSE
-  )
+    stringsAsFactors = FALSE)
 
+    ## No longer include prototype by default (too verbose)
   if (verbose) {
     proto_cols <- as.data.frame(smat)
     return(cbind(proto_cols, summary_cols))
@@ -180,15 +179,3 @@ dq.vect <- function(v, min.cor, min.dist, q, metric, allgenes, min.genes,
   summary_cols
 }
 
-
-#' Calculate cosine similarity between two matrices
-#'
-#' @param x Numeric matrix (genes x samples).
-#' @param y Numeric matrix (genes x references).
-#' @return Cosine similarity matrix (samples x references).
-#' @export
-cosine.sim <- function(x, y) {
-  a <- crossprod(x, y)
-  b <- outer(sqrt(colSums(x^2)), sqrt(colSums(y^2)))
-  a / b
-}

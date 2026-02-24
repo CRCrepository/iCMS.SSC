@@ -33,9 +33,25 @@ icms_results.knn = iCMS.KNN(test)
 icms_results.ntp = iCMS.NTP(test)
 
 ```
-The outputs provide iCMS calls for each algorithm (DQ, KNN, and NTP). All three functions provide both nearest (most likely) and confident iCMS calls in the output under the columns "nearest.icms" and "confident.icms" respectively. The difference between the nearest and confident calls is that a nearest call will always be made, even when iCMS2 and iCMS3 classes seem almost equally probable. A confident call is only returned if it seems statistically quite probable. When a confident call cannot be made, the "confident.icms" column will contain NA (not a value). The "nearest.icms" column should not contain NAs.
+The outputs provide iCMS calls for each algorithm (DQ, KNN, and
+NTP). All three functions provide both nearest (most likely) and
+confident iCMS calls in the output under the columns "nearest.icms"
+and "confident.icms" respectively. The difference between the nearest
+and confident calls is that a nearest call will always be made, even
+when iCMS2 and iCMS3 classes seem almost equally probable. A confident
+call is only returned if it seems statistically quite probable. When a
+confident call cannot be made, the "confident.icms" column will
+contain NA (not a value). The "nearest.icms" column should not contain
+NAs.
 
-Note that the output data frames also contain variables that are specific to each algorithm/criterion, mostly useful for debugging and deeper analysis. These can be safely ignored in most cases. 
+A sensible choice in most cases is to call iCMS.KNN() with default
+parameters. The iCMS.DQ() function produces fewer confident calls than
+the iCMS.KNN (~80% versus 90+%), but has a slightly higher accuracy
+when a confident call is made (~99% vs 95%). 
+
+Note that the output data frames also contain variables that are
+specific to each algorithm/criterion, mostly useful for debugging and
+deeper analysis. These can be safely ignored in most cases.
 
 
 ```{r}

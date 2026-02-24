@@ -2,13 +2,16 @@
 
 ## New features
 
-* `iCMS.DQ()` / `dq.vect()`: new `stratify.ds` parameter — computes the
-  quantile margin separately for each training dataset (Marisa, PETACC, TCGA)
-  and aggregates, removing confounding by platform-level similarity differences.
+* `iCMS.DQ()` / `dq.vect()`: new `stratify.ds` parameter — computes
+  the quantile margin separately for each training dataset and
+  aggregates, removing confounding by platform-level similarity
+  differences. Can be considered if strong batch effect in the input
+  data.
 * `iCMS.DQ()` / `dq.vect()`: new `weighted.genes` parameter — uses
   weighted Pearson or weighted cosine similarity (all genes, weighted by
   absolute t-statistic) for `metric = "pearson"` / `"cosine"`; restricts
-  to the top 100 most discriminative genes for rank-based metrics.
+  to the top 100 most discriminative genes for rank-based
+  metrics. Usually not necessary.
 * `iCMS.DQ()` / `dq.vect()`: `verbose` parameter now defaults to `FALSE`,
   returning 7 summary columns instead of the full 192-column prototype matrix.
   Set `verbose = TRUE` to restore the previous behaviour.
@@ -28,7 +31,7 @@
   each of the `nn` neighbours contributes a vote proportional to its
   (non-negative shifted) similarity score instead of equal weight.
 * `iCMS.KNN()` / `knn.vect()`: confident call criterion changed from a
-  hardcoded 90% majority threshold to a **binomial test**
+  hardcoded 90% majority threshold to a **binomial test**.
   (`pbinom(n_majority - 1, nn, 0.5, lower.tail = FALSE) < 0.05`). This is
   statistically motivated and consistent across different values of `nn`.
 

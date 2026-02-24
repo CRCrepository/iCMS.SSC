@@ -2,28 +2,52 @@
 % Please edit documentation in R/calc_ssp.R
 \name{dq.vect}
 \alias{dq.vect}
-\title{calculate iCMS on bulk data (microarray / RNA-seq) using single-sample predictor}
+\title{Classify a single sample using the Distance-Quantile (DQ) single-sample predictor}
 \usage{
-dq.vect(v, min.cor, min.dist, q, metric, allgenes, min.genes)
+dq.vect(
+  v,
+  min.cor,
+  min.dist,
+  q,
+  metric,
+  allgenes,
+  min.genes,
+  stratify.ds = FALSE,
+  weighted.genes = FALSE,
+  verbose = FALSE
+)
 }
 \arguments{
-\item{v}{input vector to calculate.}
+\item{v}{Named numeric vector of (log-transformed) gene expression values.}
 
-\item{min.cor}{the minimum correlation threshold to determine the confidence}
+\item{min.cor}{Minimum q-quantile similarity required for a confident call (default 0.1).}
 
-\item{min.dist}{the minimum distance to determine the iCMS call}
+\item{min.dist}{Minimum scaled margin between i2 and i3 quantile scores for a confident call (default 0.05).}
 
-\item{q}{The quantile that is used to judge distance. q=0.9-1 appears better for non batch and corrected data while q=0.6-0.7 appears better for batch-corrected}
+\item{q}{Quantile used to summarise per-class similarity scores (default 0.9).
+Values 0.9–1 suit non-batch-corrected data; 0.6–0.7 suit batch-corrected data.}
 
-\item{allgenes}{whether to use the extended genes or not, basically only epithelial genes are used}
+\item{metric}{Similarity metric: "pearson", "kendall" (default), "spearman", or "cosine".}
 
-\item{min.genes}{Minimum number of genes that can calculate iCMS call}
+\item{allgenes}{Use extended gene set (default FALSE; uses epithelial genes only).}
 
-\item{matric}{The method to calculate correlation matrix. Kendall correlation (non parametric) seems more robust but is slow. Pearson is faster, and often good enough.}
+\item{min.genes}{Minimum gene overlap with the prototype set (default 30).}
+
+\item{stratify.ds}{If TRUE, compute the quantile margin per training dataset and aggregate
+across datasets, which removes the confounding effect of platform-level similarity
+differences (default FALSE).}
+
+\item{weighted.genes}{If TRUE, restrict computation to the top 100 most discriminative genes
+(by absolute t-statistic); for "pearson" and "cosine" uses weighted correlation /
+weighted cosine instead (default FALSE).}
+
+\item{verbose}{If TRUE, return all 192 prototype-level similarity columns in addition to
+the summary statistics. Default FALSE returns only the 7 summary columns.}
 }
 \value{
-iCMS classification for this sample
+A one-row data frame with columns: i2, i3, i2i3, nearest.icms, confident.icms,
+nearest.dset, ngenes (plus prototype columns when verbose = TRUE).
 }
 \description{
-calculate iCMS on bulk data (microarray / RNA-seq) using single-sample predictor
+Classify a single sample using the Distance-Quantile (DQ) single-sample predictor
 }

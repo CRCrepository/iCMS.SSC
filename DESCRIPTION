@@ -1,13 +1,13 @@
 Package: iCMS.SSC
 Title: iCMS single-sample classifier (SSC)
-Version: 0.9
+Version: 1.2
 Authors@R: 
     person("Petros", "Tsantoulis", , "petros.tsantoulis@hug.ch", role = c("aut", "cre"))
 Description: The single-sample classifier (SSC) estimates the most probable intrinsic consensus molecular subtype (iCMS) of a colorectal cancer sample as described in Joanito et al. (Nat Genet. 2022 Jul;54(7):963-975).The package has been developed to be relatively robust to technical variation, specifically without reliance on batch correction methods. An implementation of the bulk iCMS classifier is also provided, based on the NTP method, as described in the original publication.
 License: GPL (n >=3)
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.1
+RoxygenNote: 7.3.3
 Imports: 
       dplyr,
       parallel

@@ -2,26 +2,50 @@
 % Please edit documentation in R/calc_knn.R
 \name{knn.vect}
 \alias{knn.vect}
-\title{calculate iCMS on bulk data (microarray / RNA-seq) using k-nearest neighbors algorithm for each sample}
+\title{Classify a single sample using the K-Nearest Neighbours (KNN) method}
 \usage{
-knn.vect(v, nn, metric, allgenes, min.genes, mcenter = FALSE, verbose = FALSE)
+knn.vect(
+  v,
+  nn,
+  metric,
+  allgenes,
+  min.genes,
+  mcenter = FALSE,
+  stratify.ds = FALSE,
+  weighted.genes = FALSE,
+  verbose = FALSE
+)
 }
 \arguments{
-\item{v}{input matrix to calculate. The row will be the gene symbol, and column will be sample name}
+\item{v}{Named numeric vector of (log-transformed) gene expression values.}
 
-\item{nn}{the minimum correlation threshold to determine the confidence (default = 0.1)}
+\item{nn}{Number of nearest neighbours (default 10).}
 
-\item{allgenes}{whether to use the extended genes or not, basically only epithelial genes are used (default = FALSE)}
+\item{metric}{Similarity metric: "pearson", "kendall" (default), "spearman", or "cosine".}
 
-\item{min.genes}{Minimum number of genes that can calculate iCMS call (default = 30 genes)}
+\item{allgenes}{Use extended gene set (default FALSE; uses epithelial genes only).}
 
-\item{mcenter}{description}
+\item{min.genes}{Minimum gene overlap with the prototype set (default 30).}
 
-\item{matric}{The method to calculate correlation matrix (default = kendall). Kendall correlation (non parametric) seems more robust but is slow. Pearson is faster, and often good enough.}
+\item{mcenter}{Mean-centre the sample before computing similarity. Only relevant for
+cosine similarity (correlation metrics are shift-invariant). Default FALSE.}
+
+\item{stratify.ds}{If TRUE, vote is stratified by training dataset: for each dataset the
+class whose best prototype is most similar wins one vote, then votes are tallied across
+datasets. This prevents a single batch-matched dataset from dominating the top-nn
+neighbours. Default FALSE.}
+
+\item{weighted.genes}{If TRUE, restrict computation to the top 100 most discriminative
+genes (by absolute t-statistic); for "pearson" and "cosine" uses weighted correlation /
+weighted cosine instead. Default FALSE.}
+
+\item{verbose}{If TRUE, return individual neighbour labels, similarities, and dataset
+labels as additional columns. Default FALSE.}
 }
 \value{
-iCMS classification
+A one-row data frame with columns: qi2, qi3, i2, i3, i2i3, nearest.icms,
+confident.icms, nearest.ds, ngenes (plus neighbour details when verbose = TRUE).
 }
 \description{
-calculate iCMS on bulk data (microarray / RNA-seq) using k-nearest neighbors algorithm for each sample
+Classify a single sample using the K-Nearest Neighbours (KNN) method
 }

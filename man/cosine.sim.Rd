@@ -2,10 +2,18 @@
 % Please edit documentation in R/calc_ssp.R
 \name{cosine.sim}
 \alias{cosine.sim}
-\title{calculate cosine similarity}
+\title{Calculate cosine similarity between two matrices}
 \usage{
 cosine.sim(x, y)
 }
+\arguments{
+\item{x}{Numeric matrix (genes x samples).}
+
+\item{y}{Numeric matrix (genes x references).}
+}
+\value{
+Cosine similarity matrix (samples x references).
+}
 \description{
-calculate cosine similarity
+Calculate cosine similarity between two matrices
 }

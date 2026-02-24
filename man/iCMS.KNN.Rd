@@ -2,7 +2,7 @@
 % Please edit documentation in R/icms.ssc.R
 \name{iCMS.KNN}
 \alias{iCMS.KNN}
-\title{calculate iCMS on bulk data (microarray / RNA-seq) using k-nearest neighbors algorithm}
+\title{Classify bulk gene-expression samples using the K-Nearest Neighbours (KNN) method}
 \usage{
 iCMS.KNN(
   ivect,
@@ -10,26 +10,44 @@ iCMS.KNN(
   metric = "kendall",
   allgenes = FALSE,
   min.genes = 30,
+  mcenter = FALSE,
+  stratify.ds = FALSE,
+  weighted.genes = FALSE,
   jobs = 4,
   verbose = FALSE
 )
 }
 \arguments{
-\item{ivect}{input matrix to calculate. The row will be the gene symbol, and column will be sample name}
+\item{ivect}{Gene-expression matrix with gene symbols as row names and samples as columns.
+Values should be log-transformed.}
 
-\item{nn}{the minimum correlation threshold to determine the confidence (default = 0.1)}
+\item{nn}{Number of nearest neighbours (default 10).}
 
-\item{allgenes}{whether to use the extended genes or not, basically only epithelial genes are used (default = FALSE)}
+\item{metric}{Similarity metric: "pearson", "kendall" (default), "spearman", or "cosine".}
 
-\item{min.genes}{Minimum number of genes that can calculate iCMS call (default = 30 genes)}
+\item{allgenes}{Use extended gene set (default FALSE; uses epithelial genes only).}
 
-\item{jobs}{If parallel execution fails you can try jobs=1 which will use serial apply (default = 4)}
+\item{min.genes}{Minimum gene overlap required (default 30).}
 
-\item{matric}{The method to calculate correlation matrix (default = kendall). Kendall correlation (non parametric) seems more robust but is slow. Pearson is faster, and often good enough.}
+\item{mcenter}{Mean-centre each sample before computing cosine similarity (default FALSE;
+has no effect for correlation-based metrics).}
+
+\item{stratify.ds}{If TRUE, vote is stratified by training dataset, preventing a single
+batch-matched cohort from dominating the top-nn neighbours (default FALSE).}
+
+\item{weighted.genes}{If TRUE, up-weight discriminative genes by their absolute
+t-statistic when metric is "pearson" or "cosine"; for rank-based metrics restricts
+to the top 100 most discriminative genes (default FALSE).}
+
+\item{jobs}{Number of parallel cores. Set to 1 to disable parallelism (default 4).}
+
+\item{verbose}{If TRUE, include individual neighbour labels, similarities, and dataset
+labels in the output (default FALSE).}
 }
 \value{
-iCMS classification
+A data frame with one row per sample. Key columns: nearest.icms, confident.icms.
 }
 \description{
-calculate iCMS on bulk data (microarray / RNA-seq) using k-nearest neighbors algorithm
+Estimates the most probable iCMS subtype for each sample by majority vote among the
+nn most similar prototype columns, with votes weighted by similarity score.
 }

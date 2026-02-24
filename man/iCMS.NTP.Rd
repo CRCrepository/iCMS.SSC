@@ -2,26 +2,24 @@
 % Please edit documentation in R/icms.ssc.R
 \name{iCMS.NTP}
 \alias{iCMS.NTP}
-\title{calculate iCMS on bulk data (microarray / RNA-seq) using k-nearest neighbors algorithm}
+\title{Classify bulk gene-expression samples using the Nearest Template Prediction (NTP) method}
 \usage{
 iCMS.NTP(ivect, metric = "kendall", bs.iter = 100, jobs = 8)
 }
 \arguments{
-\item{ivect}{input matrix to calculate. The row will be the gene symbol, and column will be sample name}
+\item{ivect}{Gene-expression matrix with gene symbols as row names and samples as columns.
+Values should be log-transformed.}
 
-\item{bs.iter}{the number of iteration to calculate P-value}
+\item{metric}{Similarity metric (default "kendall").}
 
-\item{jobs}{If parallel execution fails you can try jobs=1 which will use serial apply (default = 4)}
+\item{bs.iter}{Number of bootstrap iterations for p-value estimation (default 100).}
 
-\item{matric}{The method to calculate correlation matrix (default = kendall). Kendall correlation (non parametric) seems more robust but is slow. Pearson is faster, and often good enough.}
-
-\item{allgenes}{whether to use the extended genes or not, basically only epithelial genes are used (default = FALSE)}
-
-\item{min.genes}{Minimum number of genes that can calculate iCMS call (default = 30 genes)}
+\item{jobs}{Number of parallel cores (default 8).}
 }
 \value{
-iCMS classification
+A data frame with per-sample iCMS calls and bootstrap p-values.
 }
 \description{
-calculate iCMS on bulk data (microarray / RNA-seq) using k-nearest neighbors algorithm
+This is the published bulk iCMS classifier from Joanito et al. (Nat Genet 2022).
+Note: NTP is sensitive to batch effects; consider batch correction before use.
 }

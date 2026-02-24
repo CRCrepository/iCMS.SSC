@@ -2,7 +2,7 @@
 % Please edit documentation in R/icms.ssc.R
 \name{iCMS.DQ}
 \alias{iCMS.DQ}
-\title{calculate iCMS on bulk data (microarray / RNA-seq) using single-sample predictor}
+\title{Classify bulk gene-expression samples using the Distance-Quantile (DQ) single-sample predictor}
 \usage{
 iCMS.DQ(
   ivect,
@@ -12,29 +12,46 @@ iCMS.DQ(
   metric = "kendall",
   allgenes = FALSE,
   min.genes = 30,
-  jobs = 4
+  stratify.ds = FALSE,
+  weighted.genes = FALSE,
+  jobs = 4,
+  verbose = FALSE
 )
 }
 \arguments{
-\item{ivect}{input matrix to calculate. The row will be the gene symbol, and column will be sample name}
+\item{ivect}{Gene-expression matrix with gene symbols as row names and samples as columns.
+Values should be log-transformed.}
 
-\item{min.cor}{the minimum correlation threshold to determine the confidence (default = 0.1)}
+\item{min.cor}{Minimum quantile similarity required for a confident call (default 0.1).}
 
-\item{min.dist}{the minimum distance to determine the iCMS call (default = 0.05)}
+\item{min.dist}{Minimum scaled margin between i2 and i3 scores for a confident call (default 0.05).}
 
-\item{q}{The quantile that is used to judge distance (default = 0.9). q=0.9-1 appears better for non batch and corrected data while q=0.6-0.7 appears better for batch-corrected}
+\item{q}{Quantile used to summarise per-class similarities (default 0.9).
+Values 0.9–1 suit non-batch-corrected data; 0.6–0.7 suit batch-corrected data.}
 
-\item{allgenes}{whether to use the extended genes or not, basically only epithelial genes are used (default = FALSE)}
+\item{metric}{Similarity metric: "pearson", "kendall" (default), "spearman", or "cosine".}
 
-\item{min.genes}{Minimum number of genes that can calculate iCMS call (default = 30 genes)}
+\item{allgenes}{Use extended gene set (default FALSE; uses epithelial genes only).}
 
-\item{jobs}{If parallel execution fails you can try jobs=1 which will use serial apply (default = 4)}
+\item{min.genes}{Minimum gene overlap required (default 30).}
 
-\item{matric}{The method to calculate correlation matrix (default = kendall). Kendall correlation (non parametric) seems more robust but is slow. Pearson is faster, and often good enough.}
+\item{stratify.ds}{If TRUE, compute per-dataset quantile margins and aggregate, removing
+the confounding effect of platform-level similarity differences (default FALSE).}
+
+\item{weighted.genes}{If TRUE, up-weight discriminative genes by their absolute
+t-statistic when metric is "pearson" or "cosine"; for rank-based metrics restricts
+to the top 100 most discriminative genes (default FALSE).}
+
+\item{jobs}{Number of parallel cores. Set to 1 to disable parallelism (default 4).}
+
+\item{verbose}{If TRUE, include all 192 prototype-level similarity columns in the output.
+Default FALSE returns 7 summary columns only.}
 }
 \value{
-iCMS classification
+A data frame with one row per sample. Key columns: nearest.icms, confident.icms.
 }
 \description{
-calculate iCMS on bulk data (microarray / RNA-seq) using single-sample predictor
+Estimates the most probable iCMS subtype for each sample by comparing its similarity to
+synthetic exemplar centroids from three training cohorts (Marisa, PETACC, TCGA), using
+the q-quantile of per-class similarities as the decision score.
 }

@@ -1,89 +1,177 @@
-#' calculate iCMS on bulk data (microarray / RNA-seq) using k-nearest neighbors algorithm for each sample
-#' @param v input matrix to calculate. The row will be the gene symbol, and column will be sample name
-#' @param nn the minimum correlation threshold to determine the confidence (default = 0.1)
-#' @param matric The method to calculate correlation matrix (default = kendall). Kendall correlation (non parametric) seems more robust but is slow. Pearson is faster, and often good enough.
-#' @param allgenes  whether to use the extended genes or not, basically only epithelial genes are used (default = FALSE)
-#' @param min.genes Minimum number of genes that can calculate iCMS call (default = 30 genes)
-#' @param mcenter description
-#' @return iCMS classification
-#' @export
+#' Classify a single sample using the K-Nearest Neighbours (KNN) method
 #'
-knn.vect <- function(v, nn, metric, allgenes, min.genes, mcenter=FALSE, verbose=FALSE)
-{
-  if (allgenes) {
-    prot <- ssproto.ext } else { prot <- ssproto }
-  cg <- intersect(rownames(prot), names(na.omit(v)))
+#' @param v Named numeric vector of (log-transformed) gene expression values.
+#' @param nn Number of nearest neighbours (default 10).
+#' @param metric Similarity metric: "pearson", "kendall" (default), "spearman", or "cosine".
+#' @param allgenes Use extended gene set (default FALSE; uses epithelial genes only).
+#' @param min.genes Minimum gene overlap with the prototype set (default 30).
+#' @param mcenter Mean-centre the sample before computing similarity. Only relevant for
+#'   cosine similarity (correlation metrics are shift-invariant). Default FALSE.
+#' @param stratify.ds If TRUE, vote is stratified by training dataset: for each dataset the
+#'   class whose best prototype is most similar wins one vote, then votes are tallied across
+#'   datasets. This prevents a single batch-matched dataset from dominating the top-nn
+#'   neighbours. Default FALSE.
+#' @param weighted.genes If TRUE, restrict computation to the top 100 most discriminative
+#'   genes (by absolute t-statistic); for "pearson" and "cosine" uses weighted correlation /
+#'   weighted cosine instead. Default FALSE.
+#' @param verbose If TRUE, return individual neighbour labels, similarities, and dataset
+#'   labels as additional columns. Default FALSE.
+#' @return A one-row data frame with columns: qi2, qi3, i2, i3, i2i3, nearest.icms,
+#'   confident.icms, nearest.ds, ngenes (plus neighbour details when verbose = TRUE).
+#' @export
+knn.vect <- function(v, nn, metric, allgenes, min.genes,
+                     mcenter = FALSE, stratify.ds = FALSE,
+                     weighted.genes = FALSE, verbose = FALSE) {
 
-  if (length(cg)<min.genes) {
-    warning("Too few common genes. Unable to map prototype")
+  prot <- if (allgenes) ssproto.ext else ssproto
+  cg   <- intersect(rownames(prot), names(na.omit(v)))
+
+  if (length(cg) < min.genes) {
+    warning("Too few common genes. Unable to map prototype.")
     return(NA)
   }
 
-  if (mcenter) {
-    v <- v-mean(v, na.rm=TRUE)
-  }
+  if (mcenter) v <- v - mean(v, na.rm = TRUE)
 
-  if (metric!="cosine"){
-    smat <- cor(as.matrix(v)[cg,], prot[cg,], method=metric)
-    colnames(smat) <- colnames(prot)
-  } else {
-    if (metric=="cosine") {
-        cosine.sim <- function(x, y) {
-            a <- crossprod(x,y)
-            nx <- norm(x, type="2")
-            ny <- apply(y, 2, norm, type="2")
-            a/(nx*ny)
-##            a <- crossprod(x,y)
-##            b <- outer(sqrt(apply(x,2,crossprod)), sqrt(apply(y,2,crossprod)))
-##            a/b
+  ## --- Gene weighting / subsetting -----------------------------------
+  if (weighted.genes) {
+    wts <- gene.weights[cg]
+    if (metric %in% c("pearson", "cosine")) {
+      smat_vec <- if (metric == "pearson")
+        .wt_pearson_mat(v[cg], prot[cg, ], wts)
+      else
+        .wt_cosine_mat(v[cg], prot[cg, ], wts)
+      smat <- matrix(smat_vec, nrow = 1, dimnames = list(NULL, colnames(prot)))
+    } else {
+      top_cg <- head(cg[order(wts, decreasing = TRUE)], min(100L, length(cg)))
+      if (length(top_cg) < min.genes) {
+        warning("Too few genes after weighting. Unable to map prototype.")
+        return(NA)
       }
-      smat <- cosine.sim(as.matrix(v)[cg,], prot[cg,])
+      cg   <- top_cg
+      smat <- cor(as.matrix(v)[cg, ], prot[cg, ], method = metric)
+      colnames(smat) <- colnames(prot)
+    }
+  } else {
+    if (metric != "cosine") {
+      smat <- cor(as.matrix(v)[cg, ], prot[cg, ], method = metric)
+      colnames(smat) <- colnames(prot)
+    } else {
+      smat <- .cosine_vec_mat(as.matrix(v)[cg, ], prot[cg, ])
       colnames(smat) <- colnames(prot)
     }
   }
 
-  ord <- order(smat, decreasing=TRUE)[1:nn]
-  knn <- ssicms.index[ord]
-  knnd <- as.vector(smat[ord])
+  ## Dataset labels for each prototype column
+  ds_all <- sub("^i[23][.]", "", sub("-s[0-9]+$", "", colnames(prot)))
+
+  ## ===== Dataset-stratified voting ====================================
+  if (stratify.ds) {
+    unique_ds  <- unique(ds_all)
+    ds_votes   <- vapply(unique_ds, function(d) {
+      mask  <- ds_all == d
+      sims  <- as.vector(smat)[mask]
+      idx_d <- ssicms.index[mask]
+      if (max(sims[idx_d == "i2"]) > max(sims[idx_d == "i3"])) "i2" else "i3"
+    }, character(1L))
+    names(ds_votes) <- unique_ds
+
+    n_ds  <- length(unique_ds)
+    n_i2  <- sum(ds_votes == "i2")
+    n_i3  <- sum(ds_votes == "i3")
+
+    ## Weighted proportions (using per-dataset max similarity as weights)
+    ds_strength <- vapply(unique_ds, function(d) {
+      mask  <- ds_all == d
+      sims  <- as.vector(smat)[mask]
+      max(sims)
+    }, numeric(1L))
+    wt_i2 <- sum(ds_strength[ds_votes == "i2"]) / sum(ds_strength)
+    wt_i3 <- sum(ds_strength[ds_votes == "i3"]) / sum(ds_strength)
+
+    nearest.icms   <- if (n_i2 >= n_i3) "i2" else "i3"
+    ## Confident when unanimous (all training datasets agree)
+    confident.icms <- if (n_i2 == n_ds || n_i3 == n_ds) nearest.icms else NA
+
+    ## Summary similarities: median of per-dataset max similarities
+    qi2 <- median(vapply(unique_ds, function(d) {
+      max(as.vector(smat)[ds_all == d & ssicms.index == "i2"])
+    }, numeric(1L)))
+    qi3 <- median(vapply(unique_ds, function(d) {
+      max(as.vector(smat)[ds_all == d & ssicms.index == "i3"])
+    }, numeric(1L)))
+
+    nearest.ds <- unique_ds[which.max(ds_strength)]
+    i2i3       <- wt_i2 - wt_i3
+
+    retl <- list(
+      qi2            = qi2,
+      qi3            = qi3,
+      i2             = wt_i2,
+      i3             = wt_i3,
+      i2i3           = i2i3,
+      nearest.icms   = nearest.icms,
+      confident.icms = confident.icms,
+      nearest.ds     = nearest.ds,
+      ngenes         = length(cg)
+    )
+    return(data.frame(retl, stringsAsFactors = FALSE))
+  }
+
+  ## ===== Standard global KNN ==========================================
+  ord     <- order(smat, decreasing = TRUE)[1:nn]
+  knn_cls <- ssicms.index[ord]
+  knnd    <- as.vector(smat[ord])
   names(knnd) <- colnames(smat)[ord]
-  knndset <- gsub("^i[23][.]|-s[0-9]+$","",colnames(smat)[ord])
+  knndset <- ds_all[ord]
 
-  qd <- tapply(knnd, knn, median)
-  i2 <- sum(knn=="i2")/nn
-  i3 <- sum(knn=="i3")/nn
-  i2i3 <- i2-i3
-
-  cfun <- function(i2, i3) {
-    if (i2>0.9) { return("i2") }
-    if (i3>0.9) { return("i3") }
-    return(NA)
+  ## Distance-weighted vote: weight each neighbour by its similarity score.
+  ## Shift similarities to be non-negative so weights are valid.
+  w_shift <- pmax(knnd - min(0, min(knnd)), 0)
+  w_total <- sum(w_shift)
+  if (w_total > 0) {
+    wt_i2 <- sum(w_shift[knn_cls == "i2"]) / w_total
+    wt_i3 <- sum(w_shift[knn_cls == "i3"]) / w_total
+  } else {
+    wt_i2 <- wt_i3 <- 0.5
   }
 
-  nfun <- function(i2, i3, qd) {
-    if (i2==i3) {
-      if (qd["i2"]>qd["i3"]) { return("i2") }
-      return("i3")
-    }
-    if (i2>i3) { return("i2") }
-    return("i3")
-  }
+  ## Raw counts (used for binomial confidence test)
+  n_i2 <- sum(knn_cls == "i2")
+  n_i3 <- sum(knn_cls == "i3")
 
+  ## Binomial confidence: consistent across different nn values.
+  ## H0: p(i2) = 0.5. Confident when one-tailed p < 0.05.
+  n_majority <- max(n_i2, n_i3)
+  p_binom    <- pbinom(n_majority - 1L, nn, 0.5, lower.tail = FALSE)
+  confident.icms <- if (p_binom < 0.05)
+    if (n_i2 > n_i3) "i2" else "i3"
+  else NA
+
+  nearest.icms <- if (wt_i2 >= wt_i3) "i2" else "i3"
+  i2i3         <- wt_i2 - wt_i3
+
+  ## Median similarity per class (summary of neighbour quality)
+  qd  <- tapply(knnd, knn_cls, median)
+  qi2 <- if ("i2" %in% names(qd)) as.vector(qd["i2"]) else NA_real_
+  qi3 <- if ("i3" %in% names(qd)) as.vector(qd["i3"]) else NA_real_
 
   if (verbose) {
-    retl <- list(nn=knn,
-                 nnd=knnd,
-                 nnds=knndset)
-  } else { retl <- list() }
+    retl <- list(nn = knn_cls, nnd = knnd, nnds = knndset)
+  } else {
+    retl <- list()
+  }
 
-  retl <- c(retl, qi2=as.vector(qd["i2"]),
-            qi3=as.vector(qd["i3"]),
-            i2=i2,
-            i3=i3,
-            i2i3=i2i3,
-            nearest.icms=nfun(i2, i3, qd),
-            confident.icms=cfun(i2,i3),
-            nearest.ds=knndset[1],
-            ngenes=length(cg))
-
-  return(data.frame(retl))
+  retl <- c(retl,
+    qi2            = qi2,
+    qi3            = qi3,
+    i2             = wt_i2,
+    i3             = wt_i3,
+    i2i3           = i2i3,
+    nearest.icms   = nearest.icms,
+    confident.icms = confident.icms,
+    nearest.ds     = knndset[1],
+    ngenes         = length(cg)
+  )
+  data.frame(retl, stringsAsFactors = FALSE)
 }

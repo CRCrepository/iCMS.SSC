@@ -62,7 +62,9 @@ iCMS.DQ <- function(ivect,
     retl <- apply(ivect, 2, worker)
   } else {
     if (jobs > parallel::detectCores()) jobs <- parallel::detectCores()
-    retl <- parallel::mclapply(seq_len(ncol(ivect)),
+    keys <- colnames(ivect)
+    if (is.null(keys)) keys <- seq_len(ncol(ivect))
+    retl <- parallel::mclapply(keys,
                                function(j) worker(ivect[, j]),
                                mc.cores = jobs)
   }
@@ -127,7 +129,9 @@ iCMS.KNN <- function(ivect,
     retl <- apply(ivect, 2, worker)
   } else {
     if (jobs > parallel::detectCores()) jobs <- parallel::detectCores()
-    retl <- parallel::mclapply(seq_len(ncol(ivect)),
+    keys <- colnames(ivect)
+    if (is.null(keys)) keys <- seq_len(ncol(ivect))
+    retl <- parallel::mclapply(keys,
                                function(j) worker(ivect[, j]),
                                mc.cores = jobs)
   }
